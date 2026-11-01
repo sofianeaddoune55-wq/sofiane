@@ -5,12 +5,19 @@ $host = 'localhost';
 $dbname = 'techstore';
 $username = 'root';
 $password = 'sefisefi';
+$dbError = null;
+$dbReady = false;
+$pdo = null;
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    if (class_exists('PDO')) {
+        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $dbReady = true;
+    }
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    $dbError = $e->getMessage();
+    $dbReady = false;
 }
 
 function isLoggedIn() {
@@ -26,7 +33,21 @@ function redirect($url) {
     exit;
 }
 
+function dbReady() {
+    global $dbReady;
+    return $dbReady;
+}
+
+function dbErrorMessage() {
+    global $dbError;
+    return $dbError ?: 'Unable to connect to the database.';
+}
+
 function getCartCount($pdo, $user_id) {
+    if (!$pdo) {
+        return 0;
+    }
+
     $stmt = $pdo->prepare("SELECT SUM(quantity) as count FROM cart WHERE user_id = ?");
     $stmt->execute([$user_id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
